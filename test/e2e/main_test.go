@@ -1,9 +1,11 @@
 package e2e
 
 import (
+	"bytes"
 	"fmt"
 	ispnv1 "github.com/jboss-dockerfiles/infinispan-server-operator/pkg/apis/infinispan/v1"
 	"github.com/jboss-dockerfiles/infinispan-server-operator/test/e2e/util"
+	"github.com/ugol/infinispan-go/infinispan"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"strings"
@@ -42,6 +44,67 @@ func TestSimple(t *testing.T) {
 	fmt.Printf("%v\n", okd.Nodes())
 	fmt.Printf("%s\n", okd.WhoAmI())
 	fmt.Printf("%s\n", okd.Pods("default", ""))
+}
+
+// Test access external services
+func TestExternalServices(t *testing.T) {
+	// Create a resource without passing any config
+	spec := ispnv1.Infinispan{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "infinispan.org/v1",
+			Kind:       "Infinispan",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cache-infinispan-0",
+		},
+		Spec: ispnv1.InfinispanSpec{
+			Size:        1,
+			ClusterName: "single",
+		},
+	}
+
+	// Register it
+	okd.CreateInfinispan(&spec, Namespace)
+
+	// Make sure 2 pods are started
+	err := okd.WaitForPods(Namespace, "clusterName=single", 1, TestTimeout)
+
+	const conf = `
+		{
+		 "servers":[
+			 {"host": "cache-infinispan-0", "port": 11222}
+		 ],
+		 "cacheName": ""
+		}
+	`
+
+	client, err := infinispan.NewClientJSON(conf)
+	if err == nil {
+		defer client.Close()
+
+		_, errPut := client.Put([]byte("1"), []byte("foo"))
+		if errPut == nil {
+			panic(errPut.Error())
+		}
+
+		value, errGet := client.Get([]byte("1"))
+		if errGet == nil {
+			panic(errGet.Error())
+		}
+
+		if !bytes.Equal([]byte("foo"), value) {
+			t.Errorf("Expected %v, was %v", []byte("foo"), value)
+		}
+	} else {
+		panic(err.Error())
+	}
+
+	// Cleanup resource
+	defer okd.DeleteInfinispan("cache-infinispan-0", Namespace)
+
+	if err != nil {
+		panic(err.Error())
+	}
 }
 
 // Test for operator installation and creation of a cluster, using configuration from the config map

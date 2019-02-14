@@ -380,6 +380,14 @@
   version = "v1.0.3"
 
 [[projects]]
+  branch = "master"
+  digest = "1:23d2a6cbd9b113e1bc7617d06d9f0b77ece416656cacf277fce126beb51f79d7"
+  name = "github.com/ugol/infinispan-go"
+  packages = ["infinispan"]
+  pruneopts = "NT"
+  revision = "fd41d612deec85da43fdeaaa85c64f59fe041c3b"
+
+[[projects]]
   digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"
   name = "go.uber.org/atomic"
   packages = ["."]
@@ -844,6 +852,7 @@
     "github.com/openshift/client-go/user/clientset/versioned/typed/user/v1",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/version",
+    "github.com/ugol/infinispan-go/infinispan",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
