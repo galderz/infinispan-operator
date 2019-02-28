@@ -41,8 +41,8 @@ push() {
 
 
 cleanup() {
-  git branch -D Release_${RELEASE_NAME} || true
   git checkout master
+  git branch -D Release_${RELEASE_NAME} || true
 }
 
 
