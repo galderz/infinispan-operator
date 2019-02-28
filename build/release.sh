@@ -5,7 +5,7 @@ set -e -x
 DRY_RUN=${DRY_RUN:-true}
 
 
-validateReleaseName() {
+validate() {
   if [ -z "${RELEASE_NAME}" ]; then
      echo "Env variable RELEASE_NAME, which sets version to be released is unset or set to the empty string"
      exit 1
@@ -13,31 +13,44 @@ validateReleaseName() {
 }
 
 
-replaceReleaseName() {
+replace() {
   sed -i'.backup' "s/latest/${RELEASE_NAME}/g" deploy/operator.yaml
 }
 
 
-commitRelease() {
+commit() {
   git commit -a -m "${RELEASE_NAME} release"
 }
 
 
-restoreBranch() {
+tag() {
+  git tag "${RELEASE_NAME}"
+}
+
+
+restore() {
   cp deploy/operator.yaml.backup deploy/operator.yaml
   git commit -a -m "Restored branch after release changes"
 }
 
 
+push() {
+  git push --tags origin
+  git push origin master
+}
+
+
 main() {
-  validateReleaseName
-  replaceReleaseName
+  validate
+  replace
 
   if [[ "${DRY_RUN}" = true ]] ; then
     echo "DRY_RUN is set to true. Skipping..."
   else
-    commitRelease
-    restoreBranch
+    commit
+    tag
+    restore
+    push
   fi
 }
 
