@@ -13,6 +13,12 @@ validate() {
 }
 
 
+branch() {
+  git branch -D Release_${RELEASE_NAME} || true
+  git checkout -b Release_${RELEASE_NAME}
+}
+
+
 replace() {
   sed -i'.backup' "s/latest/${RELEASE_NAME}/g" deploy/operator.yaml
 }
@@ -28,28 +34,29 @@ tag() {
 }
 
 
-restore() {
-  cp deploy/operator.yaml.backup deploy/operator.yaml
-  git commit -a -m "Restored branch after release changes"
-}
-
-
 push() {
   git push --tags origin
   git push origin master
 }
 
 
+cleanup() {
+  git branch -D Release_${RELEASE_NAME} || true
+  git checkout master
+}
+
+
 main() {
   validate
+  branch
   replace
+  commit
+  tag
+  cleanup
 
   if [[ "${DRY_RUN}" = true ]] ; then
     echo "DRY_RUN is set to true. Skipping..."
   else
-    commit
-    tag
-    restore
     push
   fi
 }
