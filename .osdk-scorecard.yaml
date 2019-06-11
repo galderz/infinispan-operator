@@ -1,5 +1,5 @@
 cr-manifest:
   - "deploy/crds/cr_minimal.yaml"
-  - "deploy/crds/cr_with_configmap.yaml"
 init-timeout: 60
 csv-path: "/tmp/community-operators/upstream-community-operators/infinispan/infinispan-operator.v0.2.1.clusterserviceversion.yaml"
+olm-deployed: true
