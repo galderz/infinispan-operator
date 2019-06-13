@@ -1,0 +1,45 @@
+schema_version: 1
+
+name: "jboss-datagrid-7/datagrid73-operator"
+description: "Red Hat Data Grid Operator"
+version: "1.0"
+from: "ubi8:8-released"
+labels:
+  - name: "maintainer"
+    value: "jboss-support-dg6@redhat.com"
+  - name: "com.redhat.component"
+    value: "jboss-datagrid-7-datagrid73-operator-container"
+  - name: "io.k8s.description"
+    value: "Operator for deploying RHDG"
+  - name: "io.k8s.display-name"
+    value: "Red Hat Data Grid Operator"
+  - name: "io.openshift.tags"
+    value: "datagrid,java,jboss,xpaas,operator"
+  - name: "com.redhat.delivery.appregistry"
+    value: "true"
+#packages:
+#  content_sets:
+#    x86_64:
+#      - rhel-8-for-x86_64-baseos-rpms
+#      - rhel-8-for-x86_64-appstream-rpms
+modules:
+  repositories:
+    - path: modules
+  install:
+    - name: infinispan-operator
+osbs:
+  configuration:
+    container:
+      compose:
+        include_unpublished_pulp_repos: true
+        pulp_repos: true
+      platforms:
+        only:
+          - x86_64
+  repository:
+    name: containers/jboss-datagrid-7
+    branch: jb-datagrid-7.3-operator-rhel8
+run:
+  entrypoint:
+    - "/usr/local/bin/infinispan-operator"
+  user: "1001"
