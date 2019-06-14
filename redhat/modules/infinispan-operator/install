@@ -14,17 +14,9 @@ GHFULL=${GHORG}/${REPO}
 GOPATH=$(go env GOPATH)
 go version
 
-mkdir -p ${GOPATH}/src/code.engineering.redhat.com/gerrit/golang
-cd ${GOPATH}/src/code.engineering.redhat.com/gerrit/golang
-GIT_SSL_NO_VERIFY=true git clone https://code.engineering.redhat.com/gerrit/golang/dep
-cd dep
-make install
-
 mkdir -p ${GOPATH}/src/${GHFULL}
 tar xfz /tmp/artifacts/operator.tar.gz --strip-components=1 -C ${GOPATH}/src/${GHFULL}
 cd ${GOPATH}/src/${GHFULL} && pwd
-
-dep ensure -vendor-only
 
 go generate ./...
 go vet ./...
