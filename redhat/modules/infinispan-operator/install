@@ -2,7 +2,7 @@
 
 set -x -e
 
-INSTALL_PKGS="go-toolset-1.11.5"
+INSTALL_PKGS="go-toolset-1.11.5 git"
 #OPERATOR_VERSION="0.2.1"
 OPERATOR_PATH=/usr/local/bin/infinispan-operator
 
