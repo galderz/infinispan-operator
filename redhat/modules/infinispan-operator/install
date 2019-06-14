@@ -1,11 +1,12 @@
 #!/bin/sh
 
-set -x
+set -x -e
 
 INSTALL_PKGS="go-toolset-1.11.5"
 #OPERATOR_VERSION="0.2.1"
 OPERATOR_PATH=/usr/local/bin/infinispan-operator
 
+uname -a
 yum -y install ${INSTALL_PKGS}
 
 REPO=infinispan-operator
