@@ -17,11 +17,11 @@ labels:
     value: "datagrid,java,jboss,xpaas,operator"
   - name: "com.redhat.delivery.appregistry"
     value: "true"
-#packages:
-#  content_sets:
-#    x86_64:
-#      - rhel-8-for-x86_64-baseos-rpms
-#      - rhel-8-for-x86_64-appstream-rpms
+packages:
+  content_sets:
+    x86_64:
+      - rhel-8-for-x86_64-baseos-rpms
+      - rhel-8-for-x86_64-appstream-rpms
 modules:
   repositories:
     - path: modules
@@ -30,9 +30,9 @@ modules:
 osbs:
   configuration:
     container:
-#      compose:
-#        include_unpublished_pulp_repos: true
-#        pulp_repos: true
+      compose:
+        include_unpublished_pulp_repos: true
+        pulp_repos: true
       platforms:
         only:
           - x86_64
