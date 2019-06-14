@@ -14,7 +14,7 @@ GHFULL=${GHORG}/${REPO}
 GOPATH=$(go env GOPATH)
 go version
 
-GODEP=github.com/golang/dep/cmd/dep
+GODEP=code.engineering.redhat.com/gerrit/golang/dep
 go get -u ${GODEP}
 cd ${GOPATH}/src/${GODEP}
 make install
