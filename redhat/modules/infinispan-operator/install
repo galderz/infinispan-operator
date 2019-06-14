@@ -2,7 +2,7 @@
 
 set -x -e
 
-INSTALL_PKGS="go-toolset-1.11.5"
+INSTALL_PKGS="go-toolset-1.11.5 godep"
 #OPERATOR_VERSION="0.2.1"
 OPERATOR_PATH=/usr/local/bin/infinispan-operator
 
@@ -17,6 +17,8 @@ go version
 mkdir -p ${GOPATH}/src/${GHFULL}
 tar xfz /tmp/artifacts/operator.tar.gz --strip-components=1 -C ${GOPATH}/src/${GHFULL}
 cd ${GOPATH}/src/${GHFULL} && pwd
+
+dep ensure -vendor-only
 
 go generate ./...
 go vet ./...
