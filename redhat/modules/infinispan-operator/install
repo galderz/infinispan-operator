@@ -16,7 +16,7 @@ go version
 
 mkdir -p ${GOPATH}/src/code.engineering.redhat.com/gerrit/golang
 cd ${GOPATH}/src/code.engineering.redhat.com/gerrit/golang
-git clone https://code.engineering.redhat.com/gerrit/golang/dep
+GIT_SSL_NO_VERIFY=true git clone https://code.engineering.redhat.com/gerrit/golang/dep
 cd dep
 make install
 
