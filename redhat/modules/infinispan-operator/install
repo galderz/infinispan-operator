@@ -14,9 +14,10 @@ GHFULL=${GHORG}/${REPO}
 GOPATH=$(go env GOPATH)
 go version
 
-GODEP=code.engineering.redhat.com/gerrit/golang/dep
-go get -u ${GODEP}
-cd ${GOPATH}/src/${GODEP}
+mkdir -p ${GOPATH}/src/code.engineering.redhat.com/gerrit/golang
+cd ${GOPATH}/src/code.engineering.redhat.com/gerrit/golang
+git clone https://code.engineering.redhat.com/gerrit/golang/dep
+cd dep
 make install
 
 mkdir -p ${GOPATH}/src/${GHFULL}
