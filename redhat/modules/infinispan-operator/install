@@ -2,7 +2,7 @@
 
 set -x -e
 
-INSTALL_PKGS="go-toolset-1.11.5 git make"
+INSTALL_PKGS="go-toolset-1.11.5"
 #OPERATOR_VERSION="0.2.1"
 OPERATOR_PATH=/usr/local/bin/infinispan-operator
 
@@ -28,14 +28,7 @@ if [[ ! -f ${OPERATOR_PATH} ]] ; then
 fi
 
 mv build/bin/* /usr/local/bin/
-
-mkdir -p operator-manifests
-tar xfz /tmp/artifacts/manifests.tar.gz --strip-components=1 -C operator-manifests
-find operator-manifests/upstream-community-operators/infinispan \
-    -name '*.yaml' \
-    -exec "./format-yaml.py" {} \;
-
-mv operator-manifests/* /manifests
+mv build/manifests /manifests
 #mv deploy/crds/kieapp.crd.yaml /manifests
 #/usr/local/bin/user_setup
 
