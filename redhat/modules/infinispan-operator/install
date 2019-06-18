@@ -27,7 +27,7 @@ if [[ ! -f ${OPERATOR_PATH} ]] ; then
     exit 1
 fi
 
-mv build/bin/* /usr/local/bin/
+mv build/_output/bin/* /usr/local/bin/
 mv build/manifests /manifests
 #mv deploy/crds/kieapp.crd.yaml /manifests
 #/usr/local/bin/user_setup
