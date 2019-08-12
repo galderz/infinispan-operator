@@ -63,7 +63,6 @@ push() {
 
 
 cleanup() {
-  git checkout ${CURRENT_BRANCH}
   git branch -D Release_${RELEASE_NAME} || true
   rm -f deploy/*.backup
 }
@@ -91,12 +90,13 @@ cleanup() {
 
 
 operatorhub() {
-  local repoDir=build/community-operators
+  local repoDir=build/_output/community-operators
   local upstreamDir=upstream-community-operators/infinispan
   local communityDir=community-operators/infinispan
-  local upstreamBranch="infinispan_upstream_${RELEASE_NAME}"
-  local communityBranch="infinispan_community_${RELEASE_NAME}"
+  local upstreamBranch="infinispan-upstream-${RELEASE_NAME}"
+  local communityBranch="infinispan-community-${RELEASE_NAME}"
 
+  rm -drf ${repoDir} || echo "Operatorhub repo does not exist"
   git clone git@github.com:${GITHUB_USERNAME}/community-operators.git ${repoDir}
   prepareBranches ${repoDir} ${upstreamBranch} ${upstreamDir}
   prepareBranches ${repoDir} ${communityBranch} ${communityDir}
@@ -112,12 +112,18 @@ prepareBranches() {
   local packageFile="infinispan.package.yaml"
   local packagePath=${repoDir}/${dir}/${packageFile}
 
+  pushd ${repoDir}
+  git branch -D ${branch} || echo "Operator Hub branch exists"
   git checkout -b ${branch}
-  cp deploy/olm-catalog/${csvFile} ${csvPath}
+  popd
+
+  git checkout ${CURRENT_BRANCH}
+
+  cp deploy/olm-catalog/${CSV_FILE} ${csvPath}
   cp deploy/olm-catalog/${packageFile} ${packagePath}
 
   pushd ${repoDir}
-  updateCsvFile ${dir} ${csvFile}
+  updateCsvFile ${dir}
   git commit -a -m "Copy Infinispan manifests for ${RELEASE_NAME} release"
   popd
 
@@ -159,6 +165,7 @@ main() {
   replace
   commit
   tag
+  operatorhub
   cleanup
 
   if [[ "${DRY_RUN}" = true ]] ; then
