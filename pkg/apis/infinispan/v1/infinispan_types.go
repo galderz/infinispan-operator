@@ -1,6 +1,7 @@
 package v1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -21,8 +22,24 @@ type InfinispanContainer struct {
 	CPU          string `json:"cpu"`
 }
 
+type InfinispanSitesLocal struct {
+	ExternalService v1.Service `json:"externalService"`
+}
+
+type InfinispanSitesRemote struct {
+	Name   string `json:"name"`
+	URL    string `json:"url"`
+	Secret string `json:"secret"`
+}
+
+type InfinispanSites struct {
+	Local   InfinispanSitesLocal    `json:"local"`
+	Remotes []InfinispanSitesRemote `json:"remotes"`
+}
+
 type InfinispanService struct {
-	Type string `json:"type"`
+	Type  string          `json:"type"`
+	Sites InfinispanSites `json:"sites"`
 }
 
 // InfinispanSpec defines the desired state of Infinispan
