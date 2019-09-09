@@ -15,19 +15,24 @@ type InfinispanSecurity struct {
 }
 
 // InfinispanContainerSpec specify resource requirements per container
-type InfinispanContainerSpec struct {
+type InfinispanContainer struct {
 	ExtraJvmOpts string `json:"extraJvmOpts"`
 	Memory       string `json:"memory"`
 	CPU          string `json:"cpu"`
 }
 
+type InfinispanService struct {
+	Type string `json:"type"`
+}
+
 // InfinispanSpec defines the desired state of Infinispan
 type InfinispanSpec struct {
-	Replicas  int32                   `json:"replicas"`
-	Image     string                  `json:"image"`
-	Profile   string                  `json:"profile"`
-	Security  InfinispanSecurity      `json:"security"`
-	Container InfinispanContainerSpec `json:"container"`
+	Replicas  int32               `json:"replicas"`
+	Image     string              `json:"image"`
+	Profile   string              `json:"profile"`
+	Security  InfinispanSecurity  `json:"security"`
+	Container InfinispanContainer `json:"container"`
+	Service   InfinispanService   `json:"service"`
 }
 
 // InfinispanCondition define a condition of the cluster
