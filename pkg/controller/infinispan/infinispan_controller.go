@@ -3,6 +3,7 @@ package infinispan
 import (
 	"context"
 	"encoding/json"
+	"github.com/go-logr/logr"
 	infinispanv1 "github.com/infinispan/infinispan-operator/pkg/apis/infinispan/v1"
 	ispnutil "github.com/infinispan/infinispan-operator/pkg/controller/infinispan/util"
 	"gopkg.in/yaml.v2"
@@ -117,17 +118,8 @@ func (r *ReconcileInfinispan) Reconcile(request reconcile.Request) (reconcile.Re
 	found := &appsv1beta1.StatefulSet{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: infinispan.Name, Namespace: infinispan.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		identities, err := r.findCredentials(infinispan)
+		secret, err := r.reconcileAuth(infinispan, reqLogger)
 		if err != nil {
-			reqLogger.Error(err, "could not find create identities")
-			return reconcile.Result{}, err
-		}
-
-		secret := r.secretForInfinispan(identities, infinispan)
-		reqLogger.Info("Creating a new Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
-		err = r.client.Create(context.TODO(), secret)
-		if err != nil {
-			reqLogger.Error(err, "could not find or create identities Secret")
 			return reconcile.Result{}, err
 		}
 
@@ -223,6 +215,33 @@ func (r *ReconcileInfinispan) Reconcile(request reconcile.Request) (reconcile.Re
 	return reconcile.Result{}, nil
 }
 
+func (r *ReconcileInfinispan) reconcileAuth(m *infinispanv1.Infinispan, logger logr.Logger) (*corev1.Secret, error) {
+	if isDevelopment(m) {
+		return nil, nil
+	}
+
+	identities, err := r.findCredentials(m)
+	if err != nil {
+		logger.Error(err, "could not find create identities")
+		return nil, err
+	}
+
+	secret := r.secretForInfinispan(identities, m)
+	logger.Info("Creating a new Secret", "Secret.Namespace", secret.Namespace, "Secret.Name", secret.Name)
+	err = r.client.Create(context.TODO(), secret)
+	if err != nil {
+		logger.Error(err, "could not find or create identities Secret")
+		return nil, err
+	}
+
+	return secret, nil
+}
+
+func isDevelopment(m *infinispanv1.Infinispan) bool {
+	//.TODO equals ignore case
+	return m.Spec.Profile == "Development"
+}
+
 // deploymentForInfinispan returns an infinispan Deployment object
 func (r *ReconcileInfinispan) deploymentForInfinispan(m *infinispanv1.Infinispan, secret *corev1.Secret, configMap *corev1.ConfigMap) *appsv1beta1.StatefulSet {
 	// This field specifies the flavor of the
@@ -248,11 +267,7 @@ func (r *ReconcileInfinispan) deploymentForInfinispan(m *infinispanv1.Infinispan
 		cpu = m.Spec.Container.CPU
 	}
 
-	envVars := []corev1.EnvVar{
-		{Name: "CONFIG_PATH", Value: "/etc/config/infinispan.yaml"},
-		{Name: "IDENTITIES_PATH", Value: "/etc/security/identities.yaml"},
-		{Name: "JAVA_OPTIONS", Value: m.Spec.Container.ExtraJvmOpts},
-	}
+	envVars := deploymentEnvVars(m)
 
 	// Adding additional variables listed in ADDITIONAL_VARS env var
 	envVar, defined := os.LookupEnv("ADDITIONAL_VARS")
@@ -325,31 +340,52 @@ func (r *ReconcileInfinispan) deploymentForInfinispan(m *infinispanv1.Infinispan
 							MountPath: "/etc/security",
 						}},
 					}},
-					Volumes: []corev1.Volume{{
-						Name: "config-volume",
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
-							},
-						},
-					}, {
-						Name: "identities-volume",
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: secret.Name,
-							},
-						},
-					}},
+					Volumes: volumes(m, configMap, secret),
 				},
 			},
 		},
 	}
 
-	//	appendVolumes(m, dep)
-
 	// Set Infinispan instance as the owner and controller
 	controllerutil.SetControllerReference(m, dep, r.scheme)
 	return dep
+}
+
+func volumes(m *infinispanv1.Infinispan, configMap *corev1.ConfigMap, secret *corev1.Secret) []corev1.Volume {
+	configVolume := corev1.Volume{
+		Name: "config-volume",
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name},
+			},
+		},
+	}
+
+	if isDevelopment(m) {
+		return []corev1.Volume{configVolume}
+	}
+
+	identitiesVolume := corev1.Volume{
+		Name: "identities-volume",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secret.Name,
+			},
+		},
+	}
+
+	return []corev1.Volume{configVolume, identitiesVolume}
+}
+
+func deploymentEnvVars(m *infinispanv1.Infinispan) []corev1.EnvVar {
+	config := corev1.EnvVar{Name: "CONFIG_PATH", Value: "/etc/config/infinispan.yaml"}
+	javaOpts := corev1.EnvVar{Name: "JAVA_OPTIONS", Value: m.Spec.Container.ExtraJvmOpts}
+	if isDevelopment(m) {
+		return []corev1.EnvVar{config, javaOpts}
+	}
+
+	identities := corev1.EnvVar{Name: "IDENTITIES_PATH", Value: "/etc/security/identities.yaml"}
+	return []corev1.EnvVar{config, javaOpts, identities}
 }
 
 func (r *ReconcileInfinispan) configMapForInfinispan(m *infinispanv1.Infinispan) (*corev1.ConfigMap, error) {

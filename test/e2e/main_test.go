@@ -51,23 +51,16 @@ func TestSimple(t *testing.T) {
 func TestClusterFormation(t *testing.T) {
 	// Create a resource without passing any config
 	name := "test-cluster-formation"
-	spec := ispnv1.Infinispan{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "infinispan.org/v1",
-			Kind:       "Infinispan",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: ispnv1.InfinispanSpec{
+	spec := makeInfinispan(name,
+		ispnv1.InfinispanSpec{
 			Container: ispnv1.InfinispanContainerSpec{
 				CPU:    CPU,
 				Memory: Memory,
 			},
 			Image:    getEnvWithDefault("IMAGE", "registry.hub.docker.com/infinispan/server"),
 			Replicas: 2,
-		},
-	}
+		})
+
 	// Register it
 	kubernetes.CreateInfinispan(&spec, Namespace)
 	defer kubernetes.DeleteInfinispan(&spec, SinglePodTimeout)
@@ -109,23 +102,15 @@ func TestExternalService(t *testing.T) {
 	usr := "developer"
 
 	// Create a resource without passing any config
-	spec := ispnv1.Infinispan{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "infinispan.org/v1",
-			Kind:       "Infinispan",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: ispnv1.InfinispanSpec{
+	spec := makeInfinispan(name,
+		ispnv1.InfinispanSpec{
 			Container: ispnv1.InfinispanContainerSpec{
 				CPU:    CPU,
 				Memory: Memory,
 			},
 			Image:    getEnvWithDefault("IMAGE", "registry.hub.docker.com/infinispan/server"),
 			Replicas: 1,
-		},
-	}
+		})
 
 	// Register it
 	kubernetes.CreateInfinispan(&spec, Namespace)
@@ -183,15 +168,8 @@ func TestExternalServiceWithAuth(t *testing.T) {
 	name := "text-external-service-with-auth"
 
 	// Create Infinispan
-	spec := ispnv1.Infinispan{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "infinispan.org/v1",
-			Kind:       "Infinispan",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: ispnv1.InfinispanSpec{
+	spec := makeInfinispan(name,
+		ispnv1.InfinispanSpec{
 			Security: ispnv1.InfinispanSecurity{EndpointSecret: "conn-secret-test"},
 			Container: ispnv1.InfinispanContainerSpec{
 				CPU:    CPU,
@@ -199,8 +177,8 @@ func TestExternalServiceWithAuth(t *testing.T) {
 			},
 			Image:    getEnvWithDefault("IMAGE", "registry.hub.docker.com/infinispan/server"),
 			Replicas: 1,
-		},
-	}
+		})
+
 	kubernetes.CreateInfinispan(&spec, Namespace)
 	defer kubernetes.DeleteInfinispan(&spec, SinglePodTimeout)
 
@@ -228,6 +206,38 @@ func TestExternalServiceWithAuth(t *testing.T) {
 	}
 }
 
+func TestDevelopmentProfile(t *testing.T) {
+	name := "test-development-profile"
+
+	// Create a resource without passing any config
+	spec := makeInfinispan(name,
+		ispnv1.InfinispanSpec{
+			Container: ispnv1.InfinispanContainerSpec{
+				CPU:    CPU,
+				Memory: Memory,
+			},
+			Image:    getEnvWithDefault("IMAGE", "registry.hub.docker.com/infinispan/server"),
+			Replicas: 1,
+			Profile:  "Development",
+		})
+
+	// Register it
+	kubernetes.CreateInfinispan(&spec, Namespace)
+	defer kubernetes.DeleteInfinispan(&spec, SinglePodTimeout)
+	kubernetes.WaitForPods("app=infinispan-pod", 1, SinglePodTimeout, Namespace)
+
+	routeName := fmt.Sprintf("%s-external", name)
+	route := kubernetes.CreateRoute(name, 11222, routeName, Namespace)
+	defer kubernetes.DeleteRoute(route)
+
+	client := &http.Client{}
+	hostAddr := kubernetes.WaitForRoute(routeName, RouteTimeout, client, Namespace)
+
+	cacheName := "test"
+	createCache(cacheName, "", "", hostAddr, client)
+	defer deleteCache(cacheName, "", "", hostAddr, client)
+}
+
 func cacheURL(cacheName, hostAddr string) string {
 	return fmt.Sprintf("http://%v/rest/v2/caches/%s", hostAddr, cacheName)
 }
@@ -248,7 +258,10 @@ func httpEmpty(httpURL string, method string, usr string, pass string, client *h
 	req, err := http.NewRequest(method, httpURL, nil)
 	testutil.ExpectNoError(err)
 
-	req.SetBasicAuth(usr, pass)
+	if usr != "" && pass != "" {
+		req.SetBasicAuth(usr, pass)
+	}
+
 	resp, err := client.Do(req)
 	testutil.ExpectNoError(err)
 
@@ -287,5 +300,18 @@ func putViaRoute(url string, value string, client *http.Client, user string, pas
 	}
 	if resp.StatusCode != http.StatusOK {
 		panic(fmt.Errorf("unexpected response %v", resp))
+	}
+}
+
+func makeInfinispan(name string, spec ispnv1.InfinispanSpec) ispnv1.Infinispan {
+	return ispnv1.Infinispan{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "infinispan.org/v1",
+			Kind:       "Infinispan",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: spec,
 	}
 }
