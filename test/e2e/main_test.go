@@ -224,6 +224,53 @@ func TestExternalServiceWithAuth(t *testing.T) {
 	}
 }
 
+func TestDevelopmentProfile(t *testing.T) {
+	name := "test-development-profile"
+
+	// Create a resource without passing any config
+	spec := ispnv1.Infinispan{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "infinispan.org/v1",
+			Kind:       "Infinispan",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: ispnv1.InfinispanSpec{
+			Container: ispnv1.InfinispanContainerSpec{
+				CPU:    CPU,
+				Memory: Memory,
+			},
+			Image:    getEnvWithDefault("IMAGE", "registry.hub.docker.com/infinispan/server"),
+			Replicas: 1,
+			Profile:  "Development",
+		},
+	}
+
+	// Register it
+	kubernetes.CreateInfinispan(&spec, Namespace)
+	defer kubernetes.DeleteInfinispan(&spec, SinglePodTimeout)
+	kubernetes.WaitForPods("app=infinispan-pod", 1, SinglePodTimeout, Namespace)
+
+	routeName := fmt.Sprintf("%s-external", name)
+	client := &http.Client{}
+	hostAddr := kubernetes.WaitForExternalService(routeName, RouteTimeout, client, Namespace)
+
+	cacheName := "test"
+	createCache(cacheName, "", "", hostAddr, client)
+	defer deleteCache(cacheName, "", "", hostAddr, client)
+
+	key := "test"
+	value := "test-operator"
+	keyURL := fmt.Sprintf("%v/%v", cacheURL(cacheName, hostAddr), key)
+	putViaRoute(keyURL, value, client, "", "")
+	actual := getViaRoute(keyURL, client, "", "")
+
+	if actual != value {
+		panic(fmt.Errorf("unexpected actual returned: %v (value %v)", actual, value))
+	}
+}
+
 func cacheURL(cacheName, hostAddr string) string {
 	return fmt.Sprintf("http://%v/rest/v2/caches/%s", hostAddr, cacheName)
 }
@@ -266,7 +313,10 @@ func httpEmpty(httpURL string, method string, usr string, pass string, client *h
 	req, err := http.NewRequest(method, httpURL, nil)
 	testutil.ExpectNoError(err)
 
-	req.SetBasicAuth(usr, pass)
+	if usr != "" && pass != "" {
+		req.SetBasicAuth(usr, pass)
+	}
+
 	resp, err := client.Do(req)
 	testutil.ExpectNoError(err)
 
@@ -277,7 +327,9 @@ func httpEmpty(httpURL string, method string, usr string, pass string, client *h
 
 func getViaRoute(url string, client *http.Client, user string, pass string) string {
 	req, err := http.NewRequest("GET", url, nil)
-	req.SetBasicAuth(user, pass)
+	if user != "" && pass != "" {
+		req.SetBasicAuth(user, pass)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		panic(err.Error())
@@ -297,7 +349,9 @@ func putViaRoute(url string, value string, client *http.Client, user string, pas
 	body := bytes.NewBuffer([]byte(value))
 	req, err := http.NewRequest("POST", url, body)
 	req.Header.Set("Content-Type", "text/plain")
-	req.SetBasicAuth(user, pass)
+	if user != "" && pass != "" {
+		req.SetBasicAuth(user, pass)
+	}
 	fmt.Printf("Put request via route: %v\n", req)
 	resp, err := client.Do(req)
 	if err != nil {

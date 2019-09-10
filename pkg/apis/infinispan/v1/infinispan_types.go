@@ -25,6 +25,7 @@ type InfinispanContainerSpec struct {
 type InfinispanSpec struct {
 	Replicas  int32                   `json:"replicas"`
 	Image     string                  `json:"image"`
+	Profile   string                  `json:"profile"`
 	Security  InfinispanSecurity      `json:"security"`
 	Container InfinispanContainerSpec `json:"container"`
 }
