@@ -341,13 +341,7 @@ func (r *ReconcileInfinispan) deploymentForInfinispan(m *infinispanv1.Infinispan
 							TimeoutSeconds:      80},
 						Resources: corev1.ResourceRequirements{Requests: corev1.ResourceList{"cpu": resource.MustParse(cpu),
 							"memory": resource.MustParse(memory)}},
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      "config-volume",
-							MountPath: "/etc/config",
-						}, {
-							Name:      "identities-volume",
-							MountPath: "/etc/security",
-						}},
+						VolumeMounts: volumeMounts(m),
 					}},
 					Volumes: volumes(m, configMap, secret),
 				},
@@ -358,6 +352,24 @@ func (r *ReconcileInfinispan) deploymentForInfinispan(m *infinispanv1.Infinispan
 	// Set Infinispan instance as the owner and controller
 	controllerutil.SetControllerReference(m, dep, r.scheme)
 	return dep
+}
+
+func volumeMounts(m *infinispanv1.Infinispan) []corev1.VolumeMount {
+	configVolumeMount := corev1.VolumeMount{
+		Name:      "config-volume",
+		MountPath: "/etc/config",
+	}
+
+	if isDevelopment(m) {
+		return []corev1.VolumeMount{configVolumeMount}
+	}
+
+	identitiesVolumeMount := corev1.VolumeMount{
+		Name:      "identities-volume",
+		MountPath: "/etc/security",
+	}
+
+	return []corev1.VolumeMount{configVolumeMount, identitiesVolumeMount}
 }
 
 func volumes(m *infinispanv1.Infinispan, configMap *corev1.ConfigMap, secret *corev1.Secret) []corev1.Volume {
